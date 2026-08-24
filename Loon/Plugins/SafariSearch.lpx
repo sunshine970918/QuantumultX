@@ -13,28 +13,50 @@
 [Rewrite]
 # Safari内输入快捷键+空格+搜索关键词快速指定搜索引擎搜索
 # 先进入设置更改Safari默认搜索为DuckDuckGo
+# 必须开启 Loon 的 HTTPS 解密(MitM)并信任根证书，否则 HTTPS 流量无法被重写
 # 使用 Loon 3.5.1+ rewrite v2 语法
+#
 # 匹配机制：Loon 按顺序执行【所有】匹配成功的 rewrite，最后的 redirect 生效。
-# 因此把默认百度规则放在【最前面】，快捷键规则放在【后面】，
-# 无快捷键的请求只命中默认规则→百度；带快捷键的请求先命中默认、再被快捷键覆盖→正确引擎。
+# 因此默认百度规则放在【最前面】，快捷键规则放在【后面】覆盖。
+# 不能使用 (?!) 负向前瞻正则，Loon 不支持，会返回 404。
+#
+# Safari 吞空格处理：输入 "g 中文" 提交后 URL 是 ?q=g%E6%B5%8B%E8%AF%95（空格没了），
+# 但输入 "g 英文" 时 URL 是 ?q=g+foo（空格保留为 +）。
+# 所以每个快捷键拆成两条规则：
+#   [A] ?q=快捷键+关键字   （英文时空格保留为 + 或 %20）
+#   [B] ?q=快捷键%XX..     （中文时空格被吞，直接跟 UTF-8 百分号编码）
+# 两条规则互不重叠，且都不会误匹配 goog/git/ghost 这类普通英文单词。
 
 # 默认：百度搜索（无快捷键时使用，放在最前面兜底）
 request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=([^&]+).*/i as urlMatch then redirect(302, "https://www.baidu.com/s?wd=${urlMatch.1}")
 
-# g = 谷歌搜索（单字母快捷键必须带空格，避免误匹配 good/google 等普通单词）
+# g = 谷歌搜索（英文：g 关键字；中文：g关键字）
 request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=g(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://www.google.com/search?q=${urlMatch.1}")
-# bi = 百度图片搜索（空格可选：bi关键词 或 bi 关键词 均生效）
-request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=bi(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://image.baidu.com/search/index?tn=baiduimage&word=${urlMatch.1}")
-# gi = 谷歌图片搜索
-request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=gi(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://www.google.com/search?&tbm=isch&q=${urlMatch.1}")
-# b = Bing搜索（单字母快捷键必须带空格）
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=g(%[89a-fA-F][0-9a-fA-F][^&]+).*/i as urlMatch then redirect(302, "https://www.google.com/search?q=${urlMatch.1}")
+
+# bi = 百度图片搜索（英文：bi 关键字；中文：bi关键字）
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=bi(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://image.baidu.com/search/index?tn=baiduimage&word=${urlMatch.1}")
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=bi(%[89a-fA-F][0-9a-fA-F][^&]+).*/i as urlMatch then redirect(302, "https://image.baidu.com/search/index?tn=baiduimage&word=${urlMatch.1}")
+
+# gi = 谷歌图片搜索（英文：gi 关键字；中文：gi关键字）
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=gi(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://www.google.com/search?&tbm=isch&q=${urlMatch.1}")
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=gi(%[89a-fA-F][0-9a-fA-F][^&]+).*/i as urlMatch then redirect(302, "https://www.google.com/search?&tbm=isch&q=${urlMatch.1}")
+
+# b = Bing搜索（英文：b 关键字；中文：b关键字）
 request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=b(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://www.bing.com/search?q=${urlMatch.1}")
-# wk = 维基搜索
-request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=wk(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://zh.wikipedia.org/wiki/${urlMatch.1}")
-# qm = 七麦搜索
-request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=qm(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://www.qimai.cn/search/index/country/cn/search/${urlMatch.1}")
-# gh = GitHub搜索
-request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=gh(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://github.com/search?q=${urlMatch.1}")
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=b(%[89a-fA-F][0-9a-fA-F][^&]+).*/i as urlMatch then redirect(302, "https://www.bing.com/search?q=${urlMatch.1}")
+
+# wk = 维基搜索（英文：wk 关键字；中文：wk关键字）
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=wk(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://zh.wikipedia.org/wiki/${urlMatch.1}")
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=wk(%[89a-fA-F][0-9a-fA-F][^&]+).*/i as urlMatch then redirect(302, "https://zh.wikipedia.org/wiki/${urlMatch.1}")
+
+# qm = 七麦搜索（英文：qm 关键字；中文：qm关键字）
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=qm(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://www.qimai.cn/search/index/country/cn/search/${urlMatch.1}")
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=qm(%[89a-fA-F][0-9a-fA-F][^&]+).*/i as urlMatch then redirect(302, "https://www.qimai.cn/search/index/country/cn/search/${urlMatch.1}")
+
+# gh = GitHub搜索（英文：gh 关键字；中文：gh关键字）
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=gh(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://github.com/search?q=${urlMatch.1}")
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=gh(%[89a-fA-F][0-9a-fA-F][^&]+).*/i as urlMatch then redirect(302, "https://github.com/search?q=${urlMatch.1}")
 
 [MitM]
 hostname = duckduckgo.com
