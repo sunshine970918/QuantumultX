@@ -1,0 +1,37 @@
+#!name = 快捷搜索
+#!desc = 为Safari提供快速切换# g = 谷歌搜索，bi = 百度图片搜索，gi = 谷歌图片搜索，b = Bing搜索，wk = 维基搜索，qm = 七麦搜索，gh = GitHub搜索，无快捷键则默认使用百度搜索
+#!openUrl = https://github.com/sunshine970918/RemoveAds
+#!author = sunshine970918[https://github.com/sunshine970918/RemoveAds]
+#!tag = 去广告
+#!system = 
+#!system_version = 
+#!loon_version = 3.5.1(982)
+#!homepage = https://github.com/sunshine970918/RemoveAds
+#!icon = https://raw.githubusercontent.com/luestr/IconResource/main/App_icon/120px/Safari.png
+#!date = 2026-08-24 20:39:23
+
+[Rewrite]
+# Safari内输入快捷键+空格+搜索关键词快速指定搜索引擎搜索
+# 先进入设置更改Safari默认搜索为DuckDuckGo
+# 使用 Loon 3.5.1+ rewrite v2 语法
+# 注意：单字母快捷键 g、b 必须带空格（如 g 关键词），避免误匹配普通英文单词
+
+# g = 谷歌搜索
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=g(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://www.google.com/search?q=${urlMatch.1}")
+# bi = 百度图片搜索
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=bi(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://image.baidu.com/search/index?tn=baiduimage&word=${urlMatch.1}")
+# gi = 谷歌图片搜索
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=gi(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://www.google.com/search?&tbm=isch&q=${urlMatch.1}")
+# b = Bing搜索
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=b(?:\+|%20)([^&]+).*/i as urlMatch then redirect(302, "https://www.bing.com/search?q=${urlMatch.1}")
+# wk = 维基搜索
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=wk(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://zh.wikipedia.org/wiki/${urlMatch.1}")
+# qm = 七麦搜索
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=qm(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://www.qimai.cn/search/index/country/cn/search/${urlMatch.1}")
+# gh = GitHub搜索
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=gh(?:\+|%20)?([^&]+).*/i as urlMatch then redirect(302, "https://github.com/search?q=${urlMatch.1}")
+# 默认：百度搜索（否定前瞻排除所有快捷键，避免兜底规则覆盖快捷键规则）
+request if ${url} ~= /^https:\/\/duckduckgo\.com\/\?q=(?!(?:bi|gi|wk|qm|gh)(?:\+|%20)?|g(?:\+|%20)|b(?:\+|%20))[^&]+.*/i as urlMatch then redirect(302, "https://www.baidu.com/s?wd=${urlMatch.1}")
+
+[MitM]
+hostname = duckduckgo.com
